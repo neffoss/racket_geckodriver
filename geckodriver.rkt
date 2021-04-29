@@ -215,16 +215,68 @@
 ;;;    session-id: The session ID.
 ;;;    element-id: The element ID of the element to click.
 ;;;
-;;;  Return value: 
+;;;  Return value: "{\"value\":[]}" in case the call concluded successfuly or
+;;;                an errr message if it didn't.
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define (click-element conn session-id element-id)
   (define-values (status headers response)
     (http-conn-sendrecv! conn (string-append "/session/" session-id "/element/" element-id "/click")
-                   #:method "GET"
+                   #:method "POST"
                    #:data (jsexpr->string basic-capabilities)
                    #:headers (list "Content-Type: application/json")))
   (port->string response))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;;  Name: execute-sync
+;;;
+;;;  Description: Execute synchronously the given Javascript code
+;;;
+;;;  Input parameters
+;;;
+;;;    conn: The connection reference.
+;;;    session-id: The session ID.
+;;;    js-script: The script to be executed
+;;;
+;;;  Return value: The page's source code as a X-expression.
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(define (execute-sync conn session-id js-script)
+  (define-values (status headers response)
+    (http-conn-sendrecv! conn (string-append "/session/" session-id "/execute/sync")
+                   #:method "POST"
+                   #:data (jsexpr->string (hasheq 'script js-script 'args '()))
+                   #:headers (list "Content-Type: application/json")))
+  (port->string response))
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;;  Name: get-page-source
+;;;
+;;;  Description: Returns the page source 
+;;;
+;;;  Input parameters
+;;;
+;;;    conn: The connection reference.
+;;;    session-id: The session ID.
+;;;
+;;;  Return value: "{\"value\":[]}" in case the call concluded successfuly or
+;;;                an errr message if it didn't.
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(define (get-page-source conn session-id )
+  (define-values (status headers response)
+    (http-conn-sendrecv! conn (string-append "/session/" session-id "/source")
+                   #:method "GET"
+                   #:data (jsexpr->string basic-capabilities)
+                   #:headers (list "Content-Type: application/json")))
+  (jsexpr->string (port->string response)))
+
+
 
 ; Move below to a module for eFilling scrapper
 
@@ -237,7 +289,6 @@
   (let ([elements (hash-ref table-hash 'value)])
     (map (lambda (e) (first (hash-values e))) elements)))
 
-
 (define svr-url "127.0.0.1")
 (define svr-port 4444)
 
@@ -249,18 +300,35 @@
 (navigate-to conn session-id "https://efiling.drcor.mcit.gov.cy/DrcorPublic/SearchResults.aspx?name=%25&number=1&searchtype=optStartMatch&index=1&tname=%25&sc=0")
 (sleep 2)
 
-(displayln (find-elements conn session-id ".basket"))
+;(displayln (find-elements conn session-id ".basket"))
 
-(define elem-ids (append
- (parse-companies-table  (find-elements conn session-id ".basket"))
- (parse-companies-table  (find-elements conn session-id ".basketAlternateRow"))))
-elem-ids
+;(define elem-ids (append
+; (parse-companies-table  (find-elements conn session-id ".basket"))
+; (parse-companies-table  (find-elements conn session-id ".basketAlternateRow"))))
+;elem-ids
 
-;(click-element conn session-id (first elem-ids))
+;(define rows-count (length (parse-companies-table  (find-elements conn session-id ".basket" 0))))
 
-(navigate-to conn session-id "https://slashdot.org")
+(execute-sync conn session-id "document.getElementsByClassName('basket')[0].click();")
+(sleep 2)
+(get-page-source conn session-id)
+(sleep 2)
+(session-back conn session-id)
 (sleep 2)
 
+
+(execute-sync conn session-id "document.getElementsByClassName('basket')[1].click();")
+(sleep 2)
+(get-page-source conn session-id)
+(sleep 2)
+(session-back conn session-id)
+(sleep 2)
+
+
+(execute-sync conn session-id "document.getElementsByClassName('basket')[2].click();")
+(sleep 2)
+(get-page-source conn session-id)
+(sleep 2)
 (session-back conn session-id)
 (sleep 2)
 
