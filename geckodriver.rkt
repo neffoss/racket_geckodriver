@@ -1,7 +1,9 @@
 #lang racket
-(require net/url)
-(require json)
-(require net/http-client)
+(require net/url
+         json
+         net/http-client
+         html-parsing
+         sxml/sxpath)
 
 ; This is the hash with the basic capabilities to spin up a headless Firefox instance
 (define basic-capabilities (hasheq 'capabilities (hasheq 'alwaysMatch (hasheq 'acceptInsecureCerts #t))))
@@ -200,7 +202,7 @@
                    #:method "POST"
                    #:data (jsexpr->string (hasheq 'using "css selector" 'value css-selector))
                    #:headers (list "Content-Type: application/json")))
-  (string->jsexpr (port->string response)))
+  (port->string response))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -274,11 +276,28 @@
                    #:method "GET"
                    #:data (jsexpr->string basic-capabilities)
                    #:headers (list "Content-Type: application/json")))
-  (jsexpr->string (port->string response)))
+  ; There are a lot of conversions below, port to string, then hash and then
+  ; picking the value of the 'value' key which is the page source
+  ; finally the string is HTML string is parsed to a X-expression 
+  (html->xexp (hash-ref (string->jsexpr (port->string response)) 'value)))
 
 
 
 ; Move below to a module for eFilling scrapper
+(define (get-tbl-values tag select-fun tbl-row)
+  (map select-fun ((sxpath (string-append "//" tag )) tbl-row)))
+
+(define (parse-xpath-table tbl)
+  (if (empty? tbl)
+      '()
+      (let* ([rows ((sxpath "//tr") tbl)]
+             [hdr (first rows)]
+             [data-rows (rest rows)])
+        (list (get-tbl-values "th" last hdr )
+              (for/list ([row data-rows]) (get-tbl-values "td" rest row))))))
+
+
+
 
 ; Parses the list of hashes and returns only the element IDs
 ; The initial structure looks like
@@ -295,42 +314,37 @@
 ; The eFilling scrapper logic, needs to be moved to a separate scrapper app.
 (define conn (connect-geckosvr svr-url svr-port))
 (define session-id (get-session-id (new-session conn)))
-(displayln session-id)
-(sleep 2)
 (navigate-to conn session-id "https://efiling.drcor.mcit.gov.cy/DrcorPublic/SearchResults.aspx?name=%25&number=1&searchtype=optStartMatch&index=1&tname=%25&sc=0")
-(sleep 2)
-
-;(displayln (find-elements conn session-id ".basket"))
-
-;(define elem-ids (append
-; (parse-companies-table  (find-elements conn session-id ".basket"))
-; (parse-companies-table  (find-elements conn session-id ".basketAlternateRow"))))
-;elem-ids
 
 ;(define rows-count (length (parse-companies-table  (find-elements conn session-id ".basket" 0))))
 
 (execute-sync conn session-id "document.getElementsByClassName('basket')[0].click();")
 (sleep 2)
-(get-page-source conn session-id)
-(sleep 2)
-(session-back conn session-id)
-(sleep 2)
+
+(define table ((sxpath "//table[contains(@id, 'tbDetSummary')]") (get-page-source conn session-id)))
+(define parsed-table (second (parse-xpath-table table)))
+
+(first (second parsed-table))
+
+;(sleep 2)
+;(session-back conn session-id)
+;(sleep 2)
 
 
-(execute-sync conn session-id "document.getElementsByClassName('basket')[1].click();")
-(sleep 2)
-(get-page-source conn session-id)
-(sleep 2)
-(session-back conn session-id)
-(sleep 2)
+;(execute-sync conn session-id "document.getElementsByClassName('basket')[1].click();")
+;(sleep 2)
+;((sxpath "//table[contains(@id, 'tbDetSummary')]") (get-page-source conn session-id))
+;(sleep 2)
+;(session-back conn session-id)
+;(sleep 2)
 
 
-(execute-sync conn session-id "document.getElementsByClassName('basket')[2].click();")
-(sleep 2)
-(get-page-source conn session-id)
-(sleep 2)
-(session-back conn session-id)
-(sleep 2)
+;(execute-sync conn session-id "document.getElementsByClassName('basket')[2].click();")
+;(sleep 2)
+;((sxpath "//table[contains(@id, 'tbDetSummary')]") (get-page-source conn session-id))
+;(sleep 2)
+;(session-back conn session-id)
+;(sleep 2)
 
 (close-window conn session-id)
 (http-conn-close! conn)
