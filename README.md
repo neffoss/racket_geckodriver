@@ -42,3 +42,20 @@ More functions will be implemented when they will be needed.
     (execute-sync conn session-id "document.getElementsByClassName('basket')[0].click();")
     (sleep 2)
     (get-page-source conn session-id)
+    (close-window conn session-id)
+    (http-conn-close! conn)
+
+
+## Create the package
+
+This [post](https://blog.racket-lang.org/2017/10/tutorial-creating-a-package.html) in racket-lang.org is the most accessible resource to learn how to build packages from scratch.
+
+To install the module locally, type
+
+    raco pkg install 
+
+from racket_geckodriver's root directory.
+
+ 
+
+
