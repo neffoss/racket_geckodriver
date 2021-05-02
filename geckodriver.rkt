@@ -8,6 +8,7 @@
 (provide session-back)
 (provide delete-session)
 (provide close-window)
+(provide get-page-source)
 
 (require net/url
          json
