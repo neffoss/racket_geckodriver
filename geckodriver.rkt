@@ -1,6 +1,7 @@
 #lang racket
 
 (provide connect-geckosvr)
+(provide new-session)
 (provide get-session-id)
 (provide navigate-to)
 (provide execute-sync)
@@ -299,3 +300,71 @@
   ; picking the value of the 'value' key which is the page source
   ; finally the string is HTML string is parsed to a X-expression 
   (html->xexp (hash-ref (string->jsexpr (port->string response)) 'value)))
+
+
+
+; Move below to a module for eFilling scrapper
+(define (get-tbl-values tag select-fun tbl-row)
+  (map select-fun ((sxpath (string-append "//" tag )) tbl-row)))
+
+(define (parse-xpath-table tbl)
+  (if (empty? tbl)
+      '()
+      (let* ([rows ((sxpath "//tr") tbl)]
+             [hdr (first rows)]
+             [data-rows (rest rows)])
+        (list (get-tbl-values "th" last hdr )
+              (for/list ([row data-rows]) (get-tbl-values "td" rest row))))))
+
+
+
+
+; Parses the list of hashes and returns only the element IDs
+; The initial structure looks like
+;    hashed('value . (<session-id> . <element-id>) (<session-id> . <element-id>) ...)
+;
+; Return: A list of element-IDs
+(define (parse-companies-table table-hash)
+  (let ([elements (hash-ref table-hash 'value)])
+    (map (lambda (e) (first (hash-values e))) elements)))
+
+(define svr-url "127.0.0.1")
+(define svr-port 4444)
+
+; The eFilling scrapper logic, needs to be moved to a separate scrapper app.
+(define conn (connect-geckosvr svr-url svr-port))
+(define session-id (get-session-id (new-session conn)))
+(navigate-to conn session-id "https://efiling.drcor.mcit.gov.cy/DrcorPublic/SearchResults.aspx?name=%25&number=1&searchtype=optStartMatch&index=1&tname=%25&sc=0")
+
+;(define rows-count (length (parse-companies-table  (find-elements conn session-id ".basket" 0))))
+
+(execute-sync conn session-id "document.getElementsByClassName('basket')[0].click();")
+(sleep 2)
+
+(define table ((sxpath "//table[contains(@id, 'tbDetSummary')]") (get-page-source conn session-id)))
+(define parsed-table (second (parse-xpath-table table)))
+parsed-table
+;(first (second parsed-table))
+
+;(sleep 2)
+;(session-back conn session-id)
+;(sleep 2)
+
+
+;(execute-sync conn session-id "document.getElementsByClassName('basket')[1].click();")
+;(sleep 2)
+;((sxpath "//table[contains(@id, 'tbDetSummary')]") (get-page-source conn session-id))
+;(sleep 2)
+;(session-back conn session-id)
+;(sleep 2)
+
+
+;(execute-sync conn session-id "document.getElementsByClassName('basket')[2].click();")
+;(sleep 2)
+;((sxpath "//table[contains(@id, 'tbDetSummary')]") (get-page-source conn session-id))
+;(sleep 2)
+;(session-back conn session-id)
+;(sleep 2)
+
+(close-window conn session-id)
+(http-conn-close! conn)
