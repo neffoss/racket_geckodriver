@@ -25,6 +25,7 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define (get-session-id json-res)
+  (hash? . -> . string?)
   ;{"value":{"sessionId":"a01f5999-b630-6d42-8ef4-14b9cf64ac7f","capabilities":....
   (hash-ref (hash-ref (string->jsexpr json-res) 'value) 'sessionId))
 
@@ -45,6 +46,7 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define (connect-geckosvr host port)
+  (string? string? . -> . string?)
   (http-conn-open host
                   #:ssl? #f
                   #:port port
@@ -69,6 +71,7 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define (new-session conn)
+  (string? . -> . string?)
   (define-values (status headers response)
     (http-conn-sendrecv! conn "/session"
                    #:method "POST"
@@ -94,6 +97,7 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define (delete-session conn session-id)
+  (string? string? . -> . string?)
   (define-values (status headers response)
     (http-conn-sendrecv! conn (string-append "/session/" session-id)
                    #:method "DELETE"
@@ -118,6 +122,7 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define (close-window conn session-id)
+  (string? string? . -> . string?)
   (define-values (status headers response)
     (http-conn-sendrecv! conn (string-append "/session/" session-id "/window")
                    #:method "DELETE"
@@ -143,6 +148,7 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define (navigate-to conn session-id url)
+  (string? string? string? . -> . string?)
   (define-values (status headers response)
     (http-conn-sendrecv! conn (string-append "/session/" session-id "/url")
                    #:method "POST"
@@ -169,6 +175,7 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define (session-back conn session-id )
+  (string? string? . -> . string?)
   (define-values (status headers response)
     (http-conn-sendrecv! conn (string-append "/session/" session-id "/back")
                    #:method "POST"
@@ -197,6 +204,7 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define (find-elements conn session-id css-selector)
+  (string? string? string? . -> . string?)  
   (define-values (status headers response)
     (http-conn-sendrecv! conn (string-append "/session/" session-id "/elements")
                    #:method "POST"
@@ -222,6 +230,7 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define (click-element conn session-id element-id)
+  (string? string? string? . -> . string?)
   (define-values (status headers response)
     (http-conn-sendrecv! conn (string-append "/session/" session-id "/element/" element-id "/click")
                    #:method "POST"
@@ -246,6 +255,7 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define (execute-sync conn session-id js-script)
+  (string? string? string? . -> . string?)
   (define-values (status headers response)
     (http-conn-sendrecv! conn (string-append "/session/" session-id "/execute/sync")
                    #:method "POST"
@@ -271,6 +281,7 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define (get-page-source conn session-id )
+  (string? string? . -> . string?)
   (define-values (status headers response)
     (http-conn-sendrecv! conn (string-append "/session/" session-id "/source")
                    #:method "GET"
@@ -323,8 +334,8 @@
 
 (define table ((sxpath "//table[contains(@id, 'tbDetSummary')]") (get-page-source conn session-id)))
 (define parsed-table (second (parse-xpath-table table)))
-
-(first (second parsed-table))
+parsed-table
+;(first (second parsed-table))
 
 ;(sleep 2)
 ;(session-back conn session-id)
