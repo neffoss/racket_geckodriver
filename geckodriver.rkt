@@ -9,6 +9,7 @@
 (provide delete-session)
 (provide close-window)
 (provide get-page-source)
+(provide find-elements)
 
 (require net/url
          json
