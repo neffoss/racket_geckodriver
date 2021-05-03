@@ -221,7 +221,7 @@
                    #:method "POST"
                    #:data (jsexpr->string (hasheq 'using "css selector" 'value css-selector))
                    #:headers (list "Content-Type: application/json")))
-  (port->string response))
+  (hash-ref (string->jsexpr (port->string response)) 'value))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
